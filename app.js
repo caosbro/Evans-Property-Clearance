@@ -70,7 +70,10 @@ function bind(){
   $("aiPictureBtn").onclick=openAiPicture;
   $("closeAi").onclick=closeAiPicture;
   $("closeAiBtn").onclick=closeAiPicture;
-  $("copyAiPrompt").onclick=copyAiPrompt;
+  $("aiCameraInput").onchange=handleAiPhoto;
+  $("aiFileInput").onchange=handleAiPhoto;
+  $("analyseAiBtn").onclick=analyseAiPhoto;
+  $("addAiQuoteBtn").onclick=addAiEstimateToQuote;
   $("savedBtn").onclick=showDashboard;
   $("weightsBtn").onclick=()=>{$("weightsModal").classList.remove("hidden")};
   $("closeWeights").onclick=()=>$("weightsModal").classList.add("hidden");
@@ -206,21 +209,62 @@ async function makePdfQuote(){
   setTimeout(()=>URL.revokeObjectURL(url),1000);
   toast("PDF created");
 }
+let aiPhotoData=null;
+let aiEstimate=null;
 function openAiPicture(){
-  const name=$("customerName").value.trim()||"the customer";
-  const address=$("customerAddress").value.trim();
-  const notes=$("jobNotes").value.trim();
-  const d=getData();
-  const items=Object.entries(d.waste).filter(([k,v])=>v>0).map(([k,v])=>CONFIG.waste[k].label).join(", ");
-  const common=Array.from(document.querySelectorAll("[data-common]")).filter(b=>b.classList.contains("active")).map(b=>b.dataset.common);
-  const prompt=`Create a realistic professional property-clearance job image for Evans Property Clearance. Show a tidy, believable residential clearance scene suitable for a UK waste-removal business advertisement. Job for ${name}${address?` at ${address}`:""}. Waste involved: ${items||"general household waste"}${common.length?`. Items include ${common.join(", ")}`:""}. Job notes: ${notes||"none"}. No readable personal information, no fake phone numbers, no watermarks, no logos unless supplied separately. Photorealistic, clean composition, natural lighting.`;
-  $("aiPrompt").value=prompt;
+  aiPhotoData=null;aiEstimate=null;
+  $("aiPreview").src="";$("aiPreview").classList.add("hidden");
+  $("analyseAiBtn").classList.add("hidden");$("addAiQuoteBtn").classList.add("hidden");
+  $("aiLoading").classList.add("hidden");$("aiResult").classList.add("hidden");$("aiResult").innerHTML="";
+  $("aiCameraInput").value="";$("aiFileInput").value="";
   $("aiModal").classList.remove("hidden");
 }
 function closeAiPicture(){$("aiModal").classList.add("hidden")}
-async function copyAiPrompt(){
-  try{await navigator.clipboard.writeText($("aiPrompt").value);toast("AI prompt copied")}
-  catch(e){$("aiPrompt").select();document.execCommand("copy");toast("AI prompt copied")}
+function handleAiPhoto(e){
+  const file=e.target.files?.[0];if(!file)return;
+  if(!file.type.startsWith("image/")){toast("Please choose a photo");return}
+  if(file.size>12*1024*1024){toast("Photo is too large — choose one under 12MB");return}
+  const reader=new FileReader();
+  reader.onload=()=>{aiPhotoData=reader.result;$("aiPreview").src=aiPhotoData;$("aiPreview").classList.remove("hidden");$("analyseAiBtn").classList.remove("hidden");$("aiResult").classList.add("hidden");$("addAiQuoteBtn").classList.add("hidden")};
+  reader.readAsDataURL(file);
+}
+function normaliseAiNumber(v){const n=Number(v);return Number.isFinite(n)&&n>0?n:0}
+function calculateAiQuote(r){
+  const waste={mixed:normaliseAiNumber(r.mixed_tonnes),wood:normaliseAiNumber(r.wood_tonnes),soil:normaliseAiNumber(r.soil_tonnes),rubble:normaliseAiNumber(r.rubble_tonnes),mattresses:Math.round(normaliseAiNumber(r.mattresses)),fridges:Math.round(normaliseAiNumber(r.fridges))};
+  const wasteCost=Object.entries(waste).reduce((sum,[k,v])=>sum+v*CONFIG.waste[k].price,0);
+  const labourBase=jobType(waste),totalCost=wasteCost+labourBase,quote=Math.max(CONFIG.minCharge,totalCost*1.5);
+  return {...r,waste,wasteCost,labourBase,totalCost,quote};
+}
+function renderAiResult(r){
+  const lines=[];
+  const labels={mixed:'Mixed waste',wood:'Wood',soil:'Soil',rubble:'Rubble'};
+  for(const [k,label] of Object.entries(labels)){if(r.waste[k]>0)lines.push(`<li>${label}: <strong>${r.waste[k]} tonne${r.waste[k]===1?'':'s'}</strong></li>`) }
+  if(r.waste.mattresses)lines.push(`<li>Mattresses: <strong>${r.waste.mattresses}</strong></li>`);
+  if(r.waste.fridges)lines.push(`<li>Fridges: <strong>${r.waste.fridges}</strong></li>`);
+  $("aiResult").innerHTML=`<strong>AI assessment</strong><p>${escapeHtml(r.summary||'Rubbish identified from the photo.')}</p><ul>${lines.join('')||'<li>No clear waste category detected — manual quote recommended.</li>'}</ul><p>Confidence: <strong>${escapeHtml(r.confidence||'unknown')}</strong></p>${r.notes?`<p class="muted">${escapeHtml(r.notes)}</p>`:''}<div class="ai-total">Estimated customer price: ${money(r.quote)}</div>`;
+  $("aiResult").classList.remove("hidden");$("addAiQuoteBtn").classList.remove("hidden");
+}
+function escapeHtml(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+async function analyseAiPhoto(){
+  if(!aiPhotoData){toast("Take or upload a photo first");return}
+  $("analyseAiBtn").disabled=true;$("aiLoading").classList.remove("hidden");$("aiResult").classList.add("hidden");$("addAiQuoteBtn").classList.add("hidden");
+  try{
+    const response=await fetch('/api/analyse-rubbish',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({image:aiPhotoData})});
+    const data=await response.json();
+    if(!response.ok)throw new Error(data.error||'AI analysis failed');
+    aiEstimate=calculateAiQuote(data);renderAiResult(aiEstimate);toast('AI estimate ready');
+  }catch(e){
+    $("aiResult").innerHTML=`<strong>AI analysis unavailable</strong><p>${escapeHtml(e.message)}</p><p>Make sure the app is hosted with the included <code>/api/analyse-rubbish</code> server function and an OpenAI API key configured on the server.</p>`;$("aiResult").classList.remove("hidden");
+  }finally{$("analyseAiBtn").disabled=false;$("aiLoading").classList.add("hidden")}
+}
+function addAiEstimateToQuote(){
+  if(!aiEstimate?.waste){toast('Analyse a photo first');return}
+  for(const [key,val] of Object.entries(aiEstimate.waste)){
+    const input=$(`[data-key="${key}"] [data-qty]`);if(input)input.value=cleanNum((Number(input.value)||0)+val);
+  }
+  const note=`AI photo estimate: ${aiEstimate.summary||'Rubbish identified from photo.'} Confidence: ${aiEstimate.confidence||'unknown'}. ${aiEstimate.notes||''}`.trim();
+  const notes=$('jobNotes');notes.value=notes.value?`${notes.value}\n${note}`:note;
+  recalc();closeAiPicture();toast('AI estimate added to quote');
 }
 
 if("serviceWorker" in navigator)window.addEventListener("load",()=>navigator.serviceWorker.register("sw.js").catch(()=>{}));

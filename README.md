@@ -1,42 +1,12 @@
-# Quote Maker Pro — Evans Property Clearance
+# Evans Clearance
 
-This is a complete offline-first iPhone-friendly PWA.
+The AI button is now an **AI Rubbish Estimate**. It lets you take a photo or upload a photo, sends it to the included `/api/analyse-rubbish` server function, estimates the visible waste, applies the Evans Property Clearance pricing rules, and lets you **ADD ESTIMATE TO QUOTE**.
 
-## Included
-- Waste cost calculator with all requested waste types and rates.
-- Labour rules: £60 standard, £130 soil/rubble only, £150 soil/rubble + other waste.
-- Minimum £80 charge.
-- Standard ×1.5, +10%, +20%, custom pricing.
-- Customer view hides costs, labour and profit.
-- Owner view protected by PIN.
-- Saved quotes stored locally on the device.
-- Quote numbering: EPC-YYYY-00001.
-- Customer details, notes and payment status.
-- Daily/weekly/monthly profit and weekly quoted/paid/outstanding/profit.
-- Extra charges and custom labour.
-- Estimated weight guide and quick item buttons.
-- Offline service worker and Home Screen PWA metadata.
-- WhatsApp sharing button.
+## AI setup
+The browser app must be hosted with the included serverless function. The function uses the OpenAI Responses API for image analysis. Set the hosting environment variable:
 
-## LOGO
-The supplied Evans Property Clearance logo has been installed as `logo.jpg` and is used throughout the app and as the Home Screen icon.
+`OPENAI_API_KEY=your_key_here`
 
-## PIN
-The initial owner PIN is `2468`. Before using the app for real customer data, change `pin:"2468"` in `app.js`.
+Do **not** put the API key in `app.js` or any browser-side file.
 
-## iPhone installation
-The app must be served from HTTPS for the service worker/PWA installation to work reliably.
-
-1. Upload the folder to an HTTPS web host.
-2. Open the site in Safari on iPhone.
-3. Tap Share → Add to Home Screen.
-4. Open Quote Maker Pro from the Home Screen.
-5. Load it once while online; after that the app shell is cached for offline use.
-
-WhatsApp itself needs an internet connection to send a message. Quotes and calculations remain available offline.
-
-## Security note
-The owner PIN is an app-level privacy lock, not encryption. Local quote data is stored in the browser's local storage. Do not treat this as a secure database for highly sensitive information.
-
-
-Updated features: MAKE PDF QUOTE creates a customer-facing PDF and shares it on iPhone when supported; AI JOB PICTURE creates an AI-ready job image prompt without exposing owner costs. Existing button positions are preserved. Owner PIN is 2460.
+The included function is compatible with a Vercel-style `/api` deployment. OpenAI's current API supports image input in the Responses API, including base64 data URLs. See the official OpenAI documentation for current API setup. 

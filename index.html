@@ -33,7 +33,7 @@
         <button id="savedBtn">VIEW SAVED QUOTES</button>
         <button id="customerBtn">CUSTOMER VIEW</button>
         <button id="weightsBtn">SHOW ESTIMATED WEIGHTS</button>
-        <button id="aiPictureBtn">AI JOB PICTURE</button>
+        <button id="aiPictureBtn">AI RUBBISH ESTIMATE</button>
       </div>
 
       <section class="card">
@@ -148,12 +148,20 @@
 
   
   <div id="aiModal" class="modal hidden">
-    <div class="modal-panel">
+    <div class="modal-panel ai-panel">
       <button class="close" id="closeAi">×</button>
-      <h2>AI Job Picture</h2>
-      <p>Use the generated prompt with your preferred AI image generator to create a realistic before/after-style clearance image for this job.</p>
-      <textarea id="aiPrompt" rows="7" readonly></textarea>
-      <button class="primary" id="copyAiPrompt">COPY AI PROMPT</button>
+      <h2>🤖 AI Rubbish Estimate</h2>
+      <p>Take a photo or upload a photo of the rubbish. AI will identify the waste and estimate the amount for your quote.</p>
+      <div class="ai-photo-actions">
+        <label class="primary ai-upload">📷 TAKE PHOTO<input id="aiCameraInput" type="file" accept="image/*" capture="environment" hidden></label>
+        <label class="ai-upload">🖼️ UPLOAD PHOTO<input id="aiFileInput" type="file" accept="image/*" hidden></label>
+      </div>
+      <img id="aiPreview" class="ai-preview hidden" alt="Rubbish photo preview">
+      <button class="primary hidden" id="analyseAiBtn">ANALYSE RUBBISH & GET PRICE</button>
+      <div id="aiLoading" class="ai-loading hidden">Looking at the photo and estimating the rubbish…</div>
+      <div id="aiResult" class="ai-result hidden"></div>
+      <div class="ai-disclaimer">AI estimates are approximate. Check the photo and adjust the quantities before sending the final quote.</div>
+      <button id="addAiQuoteBtn" class="primary hidden">ADD ESTIMATE TO QUOTE</button>
       <button id="closeAiBtn">CLOSE</button>
     </div>
   </div>

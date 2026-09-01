@@ -1,0 +1,1 @@
+This app expects a server endpoint at /api/analyse-rubbish. Deploy the included serverless function and set OPENAI_API_KEY in your hosting provider's environment variables.
