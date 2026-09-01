@@ -1,0 +1,7 @@
+{
+  "functions": {
+    "api/analyse-rubbish.js": {
+      "maxDuration": 60
+    }
+  }
+}

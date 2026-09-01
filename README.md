@@ -1,12 +1,20 @@
-# Evans Clearance
+# Evans Clearance — AI Rubbish Estimate
 
-The AI button is now an **AI Rubbish Estimate**. It lets you take a photo or upload a photo, sends it to the included `/api/analyse-rubbish` server function, estimates the visible waste, applies the Evans Property Clearance pricing rules, and lets you **ADD ESTIMATE TO QUOTE**.
+The AI button now works as a photo-to-quote estimator:
 
-## AI setup
-The browser app must be hosted with the included serverless function. The function uses the OpenAI Responses API for image analysis. Set the hosting environment variable:
+1. Tap **AI RUBBISH ESTIMATE**.
+2. Take a photo or choose a photo.
+3. The app automatically sends the image to the secure server function.
+4. The AI identifies visible waste and estimates quantities.
+5. Evans Property Clearance pricing rules are applied in the app.
+6. Tap **ADD ESTIMATE TO QUOTE** to put the estimate into the normal quote.
 
-`OPENAI_API_KEY=your_key_here`
+## Important security note
+Do NOT put an OpenAI API key in `index.html`, `app.js`, or any browser-side JavaScript. The key must be stored as the server environment variable `OPENAI_API_KEY`.
 
-Do **not** put the API key in `app.js` or any browser-side file.
+The API key previously pasted into ChatGPT should be revoked and replaced because it has been exposed. Do not paste the replacement key into chat.
 
-The included function is compatible with a Vercel-style `/api` deployment. OpenAI's current API supports image input in the Responses API, including base64 data URLs. See the official OpenAI documentation for current API setup. 
+## Hosting
+This project includes a Vercel-compatible `/api/analyse-rubbish.js` function. Deploy the project to a host that supports server-side functions and add `OPENAI_API_KEY` in that host's environment-variable settings.
+
+The API uses OpenAI's Responses API with image input. The server function, not the browser, holds the secret key.

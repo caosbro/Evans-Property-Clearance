@@ -72,7 +72,6 @@ function bind(){
   $("closeAiBtn").onclick=closeAiPicture;
   $("aiCameraInput").onchange=handleAiPhoto;
   $("aiFileInput").onchange=handleAiPhoto;
-  $("analyseAiBtn").onclick=analyseAiPhoto;
   $("addAiQuoteBtn").onclick=addAiEstimateToQuote;
   $("savedBtn").onclick=showDashboard;
   $("weightsBtn").onclick=()=>{$("weightsModal").classList.remove("hidden")};
@@ -214,7 +213,7 @@ let aiEstimate=null;
 function openAiPicture(){
   aiPhotoData=null;aiEstimate=null;
   $("aiPreview").src="";$("aiPreview").classList.add("hidden");
-  $("analyseAiBtn").classList.add("hidden");$("addAiQuoteBtn").classList.add("hidden");
+  $("addAiQuoteBtn").classList.add("hidden");
   $("aiLoading").classList.add("hidden");$("aiResult").classList.add("hidden");$("aiResult").innerHTML="";
   $("aiCameraInput").value="";$("aiFileInput").value="";
   $("aiModal").classList.remove("hidden");
@@ -225,7 +224,7 @@ function handleAiPhoto(e){
   if(!file.type.startsWith("image/")){toast("Please choose a photo");return}
   if(file.size>12*1024*1024){toast("Photo is too large — choose one under 12MB");return}
   const reader=new FileReader();
-  reader.onload=()=>{aiPhotoData=reader.result;$("aiPreview").src=aiPhotoData;$("aiPreview").classList.remove("hidden");$("analyseAiBtn").classList.remove("hidden");$("aiResult").classList.add("hidden");$("addAiQuoteBtn").classList.add("hidden")};
+  reader.onload=()=>{aiPhotoData=reader.result;$("aiPreview").src=aiPhotoData;$("aiPreview").classList.remove("hidden");$("aiResult").classList.add("hidden");$("addAiQuoteBtn").classList.add("hidden");analyseAiPhoto()};
   reader.readAsDataURL(file);
 }
 function normaliseAiNumber(v){const n=Number(v);return Number.isFinite(n)&&n>0?n:0}
@@ -247,7 +246,7 @@ function renderAiResult(r){
 function escapeHtml(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
 async function analyseAiPhoto(){
   if(!aiPhotoData){toast("Take or upload a photo first");return}
-  $("analyseAiBtn").disabled=true;$("aiLoading").classList.remove("hidden");$("aiResult").classList.add("hidden");$("addAiQuoteBtn").classList.add("hidden");
+  $("aiLoading").classList.remove("hidden");$("aiResult").classList.add("hidden");$("addAiQuoteBtn").classList.add("hidden");
   try{
     const response=await fetch('/api/analyse-rubbish',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({image:aiPhotoData})});
     const data=await response.json();
@@ -255,7 +254,7 @@ async function analyseAiPhoto(){
     aiEstimate=calculateAiQuote(data);renderAiResult(aiEstimate);toast('AI estimate ready');
   }catch(e){
     $("aiResult").innerHTML=`<strong>AI analysis unavailable</strong><p>${escapeHtml(e.message)}</p><p>Make sure the app is hosted with the included <code>/api/analyse-rubbish</code> server function and an OpenAI API key configured on the server.</p>`;$("aiResult").classList.remove("hidden");
-  }finally{$("analyseAiBtn").disabled=false;$("aiLoading").classList.add("hidden")}
+  }finally{$("aiLoading").classList.add("hidden")}
 }
 function addAiEstimateToQuote(){
   if(!aiEstimate?.waste){toast('Analyse a photo first');return}
