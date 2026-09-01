@@ -1,20 +1,22 @@
-# Evans Clearance — AI Rubbish Estimate
+# Evans Property Clearance – AI Rubbish Estimate
 
-The AI button now works as a photo-to-quote estimator:
+## Important
+The AI estimate now uses a **server-side API route**. The browser never sends an OpenAI API key directly to OpenAI.
 
-1. Tap **AI RUBBISH ESTIMATE**.
-2. Take a photo or choose a photo.
-3. The app automatically sends the image to the secure server function.
-4. The AI identifies visible waste and estimates quantities.
-5. Evans Property Clearance pricing rules are applied in the app.
-6. Tap **ADD ESTIMATE TO QUOTE** to put the estimate into the normal quote.
+### Testing build
+For this temporary test build the key is stored only inside `api/analyse-rubbish.js`. Replace it with an environment variable before publishing the app.
 
-## Important security note
-Do NOT put an OpenAI API key in `index.html`, `app.js`, or any browser-side JavaScript. The key must be stored as the server environment variable `OPENAI_API_KEY`.
+### Deploy
+This project is configured for Vercel. Deploy the `evans_final` folder as a Vercel project. The app calls `/api/analyse-rubbish` on the same domain.
 
-The API key previously pasted into ChatGPT should be revoked and replaced because it has been exposed. Do not paste the replacement key into chat.
+For the proper live setup, add `OPENAI_API_KEY` as a Vercel environment variable and remove the temporary fallback key from `api/analyse-rubbish.js`.
 
-## Hosting
-This project includes a Vercel-compatible `/api/analyse-rubbish.js` function. Deploy the project to a host that supports server-side functions and add `OPENAI_API_KEY` in that host's environment-variable settings.
+### How the AI estimate works
+1. User takes/selects a rubbish photo.
+2. The browser compresses the image to reduce upload size.
+3. The browser sends the image to `/api/analyse-rubbish`.
+4. The server calls the OpenAI Responses API with image input.
+5. The server returns structured waste quantities.
+6. The app applies the Evans Property Clearance pricing rules and displays the customer price.
 
-The API uses OpenAI's Responses API with image input. The server function, not the browser, holds the secret key.
+The customer never sees tip costs, labour costs or profit.

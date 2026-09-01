@@ -244,53 +244,48 @@ function renderAiResult(r){
   $("aiResult").classList.remove("hidden");$("addAiQuoteBtn").classList.remove("hidden");
 }
 function escapeHtml(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
-const TEST_OPENAI_API_KEY = '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';
-
-async function callAiDirectForTesting(image){
-  const instructions=`You are the photo-estimation assistant for Evans Property Clearance in the UK.
-Inspect the rubbish photo carefully. Only identify items that are reasonably visible. Estimate the quantity/weight that a professional house-clearance and waste-removal company would need to remove.
-Return ONLY valid JSON with exactly these fields: {"summary":"short description","mixed_tonnes":0,"wood_tonnes":0,"soil_tonnes":0,"rubble_tonnes":0,"mattresses":0,"fridges":0,"confidence":"low|medium|high","notes":"brief assumptions"}.
-Use tonnes to one decimal place for bulk categories and whole numbers for mattresses/fridges. If a category is not visible, return 0. Do not invent hidden rubbish. Be conservative if unclear.`;
-  const controller=new AbortController();
-  const timer=setTimeout(()=>controller.abort(),30000);
-  try{
-    const response=await fetch('https://api.openai.com/v1/responses',{
-      method:'POST',
-      signal:controller.signal,
-      headers:{'Content-Type':'application/json','Authorization':`Bearer ${TEST_OPENAI_API_KEY}`},
-      body:JSON.stringify({model:'gpt-5.6-luna',input:[{role:'user',content:[{type:'input_text',text:instructions},{type:'input_image',image_url:image,detail:'high'}]}],max_output_tokens:700})
-    });
-    const data=await response.json();
-    if(!response.ok) throw new Error(data?.error?.message||`AI request failed (${response.status})`);
-    const text=data.output_text||data.output?.flatMap(x=>x.content||[]).map(x=>x.text||'').join('')||'';
-    const match=text.match(/\{[\s\S]*\}/);
-    if(!match) throw new Error('AI returned no usable estimate.');
-    return JSON.parse(match[0]);
-  }finally{clearTimeout(timer)}
+async function compressAiImage(dataUrl){
+  return await new Promise((resolve,reject)=>{
+    const img=new Image();
+    img.onload=()=>{
+      const max=1600;
+      const scale=Math.min(1,max/Math.max(img.naturalWidth,img.naturalHeight));
+      const canvas=document.createElement('canvas');
+      canvas.width=Math.max(1,Math.round(img.naturalWidth*scale));
+      canvas.height=Math.max(1,Math.round(img.naturalHeight*scale));
+      const ctx=canvas.getContext('2d');
+      ctx.drawImage(img,0,0,canvas.width,canvas.height);
+      resolve(canvas.toDataURL('image/jpeg',0.78));
+    };
+    img.onerror=()=>reject(new Error('The photo could not be prepared.'));
+    img.src=dataUrl;
+  });
 }
 
 async function analyseAiPhoto(){
   if(!aiPhotoData){toast("Take or upload a photo first");return}
   $("aiLoading").classList.remove("hidden");$("aiResult").classList.add("hidden");$("addAiQuoteBtn").classList.add("hidden");
   try{
-    let data;
-    // When opened directly from the ZIP, there is no server-side /api route.
-    // Use the temporary testing key so the feature can be tested immediately.
-    if(location.protocol==='file:'){
-      data=await callAiDirectForTesting(aiPhotoData);
-    }else{
-      const controller=new AbortController();const timer=setTimeout(()=>controller.abort(),30000);
-      try{
-        const response=await fetch('/api/analyse-rubbish',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({image:aiPhotoData}),signal:controller.signal});
-        const text=await response.text();let parsed={};try{parsed=JSON.parse(text)}catch{}
-        if(!response.ok)throw new Error(parsed.error||`AI server failed (${response.status})`);
-        data=parsed;
-      }finally{clearTimeout(timer)}
-    }
-    aiEstimate=calculateAiQuote(data);renderAiResult(aiEstimate);toast('AI estimate ready');
+    const image=await compressAiImage(aiPhotoData);
+    const controller=new AbortController();
+    const timer=setTimeout(()=>controller.abort(),55000);
+    let response;
+    try{
+      response=await fetch('/api/analyse-rubbish',{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({image}),
+        signal:controller.signal
+      });
+    }finally{clearTimeout(timer)}
+    const text=await response.text();
+    let parsed={};try{parsed=JSON.parse(text)}catch{}
+    if(!response.ok)throw new Error(parsed.error||`AI server failed (${response.status})`);
+    aiEstimate=calculateAiQuote(parsed);renderAiResult(aiEstimate);toast('AI estimate ready');
   }catch(e){
-    const msg=e?.name==='AbortError'?'The AI request timed out. Check your internet connection and try again.':(e?.message||'AI analysis failed.');
-    $("aiResult").innerHTML=`<strong>AI analysis unavailable</strong><p>${escapeHtml(msg)}</p><p>For this testing build, the AI is connected directly when the ZIP is opened on the phone. If this keeps happening, the temporary API key may need replacing.</p>`;$("aiResult").classList.remove("hidden");
+    const msg=e?.name==='AbortError'?'The AI server timed out. Make sure the app is deployed with the server API configured.':(e?.message||'AI analysis failed.');
+    $("aiResult").innerHTML=`<strong>AI analysis unavailable</strong><p>${escapeHtml(msg)}</p>`;
+    $("aiResult").classList.remove("hidden");
   }finally{$("aiLoading").classList.add("hidden")}
 }
 function addAiEstimateToQuote(){
