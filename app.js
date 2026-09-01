@@ -248,14 +248,14 @@ async function compressAiImage(dataUrl){
   return await new Promise((resolve,reject)=>{
     const img=new Image();
     img.onload=()=>{
-      const max=1600;
+      const max=1280;
       const scale=Math.min(1,max/Math.max(img.naturalWidth,img.naturalHeight));
       const canvas=document.createElement('canvas');
       canvas.width=Math.max(1,Math.round(img.naturalWidth*scale));
       canvas.height=Math.max(1,Math.round(img.naturalHeight*scale));
       const ctx=canvas.getContext('2d');
       ctx.drawImage(img,0,0,canvas.width,canvas.height);
-      resolve(canvas.toDataURL('image/jpeg',0.78));
+      resolve(canvas.toDataURL('image/jpeg',0.65));
     };
     img.onerror=()=>reject(new Error('The photo could not be prepared.'));
     img.src=dataUrl;
