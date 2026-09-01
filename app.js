@@ -244,16 +244,36 @@ function renderAiResult(r){
   $("aiResult").classList.remove("hidden");$("addAiQuoteBtn").classList.remove("hidden");
 }
 function escapeHtml(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+const TEST_BROWSER_OPENAI_KEY='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';
 async function analyseAiPhoto(){
   if(!aiPhotoData){toast("Take or upload a photo first");return}
   $("aiLoading").classList.remove("hidden");$("aiResult").classList.add("hidden");$("addAiQuoteBtn").classList.add("hidden");
   try{
-    const response=await fetch('/api/analyse-rubbish',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({image:aiPhotoData})});
-    const data=await response.json();
-    if(!response.ok)throw new Error(data.error||'AI analysis failed');
+    let response;
+    try{
+      response=await fetch('/api/analyse-rubbish',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({image:aiPhotoData})});
+    }catch(serverError){
+      response=null;
+    }
+    if(response){
+      const data=await response.json();
+      if(response.ok){aiEstimate=calculateAiQuote(data);renderAiResult(aiEstimate);toast('AI estimate ready');return}
+      if(![404,405,500,501,502,503].includes(response.status))throw new Error(data.error||'AI analysis failed');
+    }
+
+    // Testing fallback: allows the downloaded app to work even when the serverless
+    // /api function is not available. Replace/remove this key before real use.
+    const instructions=`You are the photo-estimation assistant for Evans Property Clearance in the UK. Inspect the rubbish photo carefully and estimate only visible rubbish. Return ONLY valid JSON: {"summary":"short description","mixed_tonnes":0,"wood_tonnes":0,"soil_tonnes":0,"rubble_tonnes":0,"mattresses":0,"fridges":0,"confidence":"low|medium|high","notes":"brief assumptions"}. Use tonnes to one decimal place for bulk categories and whole numbers for mattresses/fridges. If not visible, return 0. Do not calculate a price.`;
+    const direct=await fetch('https://api.openai.com/v1/responses',{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${TEST_BROWSER_OPENAI_KEY}`},body:JSON.stringify({model:'gpt-5.6-luna',input:[{role:'user',content:[{type:'input_text',text:instructions},{type:'input_image',image_url:aiPhotoData,detail:'high'}]}]})});
+    const directData=await direct.json();
+    if(!direct.ok)throw new Error(directData?.error?.message||'AI request failed');
+    const text=directData.output_text||'';
+    const match=text.match(/\{[\s\S]*\}/);
+    if(!match)throw new Error('AI returned an unexpected result.');
+    const data=JSON.parse(match[0]);
     aiEstimate=calculateAiQuote(data);renderAiResult(aiEstimate);toast('AI estimate ready');
   }catch(e){
-    $("aiResult").innerHTML=`<strong>AI analysis unavailable</strong><p>${escapeHtml(e.message)}</p><p>Make sure the app is hosted with the included <code>/api/analyse-rubbish</code> server function and an OpenAI API key configured on the server.</p>`;$("aiResult").classList.remove("hidden");
+    $("aiResult").innerHTML=`<strong>AI analysis unavailable</strong><p>${escapeHtml(e.message)}</p><p>Try again after checking your internet connection. The final customer price is calculated automatically once the AI identifies the rubbish.</p>`;$("aiResult").classList.remove("hidden");
   }finally{$("aiLoading").classList.add("hidden")}
 }
 function addAiEstimateToQuote(){

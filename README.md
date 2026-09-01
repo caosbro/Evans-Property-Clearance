@@ -12,7 +12,7 @@ The AI button now works as a photo-to-quote estimator:
 ## Important security note
 Do NOT put an OpenAI API key in `index.html`, `app.js`, or any browser-side JavaScript. The key must be stored as the server environment variable `OPENAI_API_KEY`.
 
-The API key previously pasted into ChatGPT should be revoked and replaced because it has been exposed. Do not paste the replacement key into chat.
+The current build contains the temporary testing key requested for this test. It is exposed in the browser fallback and MUST be replaced/removed before real use.
 
 ## Hosting
 This project includes a Vercel-compatible `/api/analyse-rubbish.js` function. Deploy the project to a host that supports server-side functions and add `OPENAI_API_KEY` in that host's environment-variable settings.
