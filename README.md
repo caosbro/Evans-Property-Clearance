@@ -37,3 +37,6 @@ WhatsApp itself needs an internet connection to send a message. Quotes and calcu
 
 ## Security note
 The owner PIN is an app-level privacy lock, not encryption. Local quote data is stored in the browser's local storage. Do not treat this as a secure database for highly sensitive information.
+
+
+Updated features: MAKE PDF QUOTE creates a customer-facing PDF and shares it on iPhone when supported; AI JOB PICTURE creates an AI-ready job image prompt without exposing owner costs. Existing button positions are preserved. Owner PIN is 2460.

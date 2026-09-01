@@ -1,5 +1,5 @@
 const CONFIG={
-  pin:"2468",
+  pin:"2460",
   minCharge:80,
   multiplier:1.5,
   waste:{
@@ -65,6 +65,12 @@ function bind(){
   $("clearBtn").onclick=clearQuote;
   $("saveBtn").onclick=saveQuote;
   $("whatsappBtn").onclick=sendWhatsApp;
+  $("pdfBtn").onclick=makePdfQuote;
+  $("customerPdfBtn").onclick=makePdfQuote;
+  $("aiPictureBtn").onclick=openAiPicture;
+  $("closeAi").onclick=closeAiPicture;
+  $("closeAiBtn").onclick=closeAiPicture;
+  $("copyAiPrompt").onclick=copyAiPrompt;
   $("savedBtn").onclick=showDashboard;
   $("weightsBtn").onclick=()=>{$("weightsModal").classList.remove("hidden")};
   $("closeWeights").onclick=()=>$("weightsModal").classList.add("hidden");
@@ -121,8 +127,15 @@ function saveQuote(){
   if(!q.name&&!q.address)toast("Add customer details first");
   state.unshift(q);saveState();$("quoteNumber").value=nextQuote();toast("Quote saved");return q;
 }
+function customerQuoteText(){
+  const d=getData();
+  const name=$("customerName").value.trim()||"Customer";
+  const address=$("customerAddress").value.trim();
+  const notes=$("jobNotes").value.trim();
+  return `EVANS PROPERTY CLEARANCE\\n\\nWaste Removal Quote\\n\\nCustomer: ${name}${address?`\\nAddress: ${address}`:""}\\n\\nQuote total: ${money(d.quote)}${notes?`\\n\\nJob notes: ${notes}`:""}\\n\\nThank you for choosing Evans Property Clearance.`;
+}
 function sendWhatsApp(){
-  const d=getData();const text=`EVANS PROPERTY CLEARANCE%0A%0A${encodeURIComponent(d.quote?money(d.quote):money(80))}%0A%0AWaste Removal Quote%0A%0A${encodeURIComponent($("customerName").value||"Customer")}`;
+  const text=encodeURIComponent(customerQuoteText());
   window.open(`https://wa.me/?text=${text}`,"_blank");
 }
 function renderDashboard(){
@@ -144,5 +157,71 @@ function showCosts(q=getData()){
   $("costBreakdown").innerHTML=html;$("costDrawer").classList.remove("hidden");
 }
 $("weightsTable").innerHTML=Object.entries(CONFIG.weights).map(([n,w])=>`<div class="weight-row"><span>${n}</span><strong>${w}</strong></div>`).join("");
+function safePdfText(v){return String(v||"").replace(/[^\x20-\x7E£]/g,"");}
+async function logoDataUrl(){
+  try{
+    const r=await fetch("logo.jpg");
+    const b=await r.blob();
+    return await new Promise((resolve,reject)=>{
+      const fr=new FileReader();fr.onload=()=>resolve(fr.result);fr.onerror=reject;fr.readAsDataURL(b);
+    });
+  }catch(e){return null}
+}
+async function makePdfQuote(){
+  recalc();
+  if(!window.jspdf||!window.jspdf.jsPDF){toast("PDF library not loaded — check your internet connection");return}
+  const d=getData(), {jsPDF}=window.jspdf, doc=new jsPDF({unit:"mm",format:"a4"});
+  const name=$("customerName").value.trim()||"Customer";
+  const address=$("customerAddress").value.trim();
+  const notes=$("jobNotes").value.trim();
+  const number=$("quoteNumber").value||nextQuote();
+  const date=new Date().toLocaleDateString("en-GB");
+  doc.setFillColor(17,24,39);doc.rect(0,0,210,34,"F");
+  const logo=await logoDataUrl();
+  if(logo) try{doc.addImage(logo,"JPEG",14,6,22,22)}catch(e){}
+  doc.setTextColor(255,255,255);doc.setFontSize(18);doc.setFont(undefined,"bold");doc.text("EVANS PROPERTY CLEARANCE",42,16);
+  doc.setFontSize(9);doc.setFont(undefined,"normal");doc.text("Waste Removal Quote",42,23);
+  doc.setTextColor(17,24,39);doc.setFontSize(11);doc.setFont(undefined,"bold");doc.text("QUOTE",16,48);
+  doc.setFont(undefined,"normal");doc.setFontSize(10);
+  doc.text(`Quote number: ${safePdfText(number)}`,16,56);
+  doc.text(`Date: ${date}`,16,62);
+  doc.text(`Customer: ${safePdfText(name)}`,16,72);
+  let y=78;
+  if(address){doc.text("Address:",16,y);doc.text(doc.splitTextToSize(safePdfText(address),178),16,y+6);y+=6+doc.splitTextToSize(safePdfText(address),178).length*5}
+  y+=10;
+  doc.setDrawColor(220,220,220);doc.line(16,y,194,y);y+=10;
+  doc.setFont(undefined,"bold");doc.setFontSize(13);doc.text("Customer price",16,y);
+  doc.setFontSize(24);doc.text(money(d.quote),194,y,{align:"right"});
+  y+=16;
+  if(notes){doc.setFont(undefined,"bold");doc.setFontSize(10);doc.text("Job notes",16,y);doc.setFont(undefined,"normal");y+=6;doc.text(doc.splitTextToSize(safePdfText(notes),178),16,y);y+=doc.splitTextToSize(safePdfText(notes),178).length*5+8}
+  doc.setFontSize(10);doc.setFont(undefined,"normal");doc.text("Thank you for choosing Evans Property Clearance.",16,270);
+  doc.text("07954130766  •  evanspropertyclearance@gmail.com",16,277);
+  const blob=doc.output("blob");
+  const file=new File([blob],`${number}.pdf`,{type:"application/pdf"});
+  if(navigator.share && navigator.canShare && navigator.canShare({files:[file]})){
+    try{await navigator.share({title:`Evans Property Clearance ${number}`,text:"Your waste removal quote from Evans Property Clearance.",files:[file]});toast("PDF ready to share");return}catch(e){if(e.name==="AbortError")return}
+  }
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement("a");a.href=url;a.download=file.name;document.body.appendChild(a);a.click();a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),1000);
+  toast("PDF created");
+}
+function openAiPicture(){
+  const name=$("customerName").value.trim()||"the customer";
+  const address=$("customerAddress").value.trim();
+  const notes=$("jobNotes").value.trim();
+  const d=getData();
+  const items=Object.entries(d.waste).filter(([k,v])=>v>0).map(([k,v])=>CONFIG.waste[k].label).join(", ");
+  const common=Array.from(document.querySelectorAll("[data-common]")).filter(b=>b.classList.contains("active")).map(b=>b.dataset.common);
+  const prompt=`Create a realistic professional property-clearance job image for Evans Property Clearance. Show a tidy, believable residential clearance scene suitable for a UK waste-removal business advertisement. Job for ${name}${address?` at ${address}`:""}. Waste involved: ${items||"general household waste"}${common.length?`. Items include ${common.join(", ")}`:""}. Job notes: ${notes||"none"}. No readable personal information, no fake phone numbers, no watermarks, no logos unless supplied separately. Photorealistic, clean composition, natural lighting.`;
+  $("aiPrompt").value=prompt;
+  $("aiModal").classList.remove("hidden");
+}
+function closeAiPicture(){$("aiModal").classList.add("hidden")}
+async function copyAiPrompt(){
+  try{await navigator.clipboard.writeText($("aiPrompt").value);toast("AI prompt copied")}
+  catch(e){$("aiPrompt").select();document.execCommand("copy");toast("AI prompt copied")}
+}
+
 if("serviceWorker" in navigator)window.addEventListener("load",()=>navigator.serviceWorker.register("sw.js").catch(()=>{}));
 init();

@@ -29,9 +29,11 @@
         <button id="clearBtn">CLEAR QUOTE</button>
         <button id="saveBtn">SAVE QUOTE</button>
         <button id="whatsappBtn">SEND BY WHATSAPP</button>
+        <button id="pdfBtn">MAKE PDF QUOTE</button>
         <button id="savedBtn">VIEW SAVED QUOTES</button>
         <button id="customerBtn">CUSTOMER VIEW</button>
         <button id="weightsBtn">SHOW ESTIMATED WEIGHTS</button>
+        <button id="aiPictureBtn">AI JOB PICTURE</button>
       </div>
 
       <section class="card">
@@ -96,6 +98,7 @@
         <h1>EVANS PROPERTY CLEARANCE</h1>
         <div class="customer-price" id="customerPriceDisplay">£80.00</div>
         <p>Waste Removal Quote</p>
+        <button class="primary" id="customerPdfBtn">MAKE PDF QUOTE</button>
         <button class="secondary" id="backOwnerBtn">OWNER VIEW</button>
       </div>
     </section>
@@ -143,6 +146,18 @@
     </div>
   </div>
 
+  
+  <div id="aiModal" class="modal hidden">
+    <div class="modal-panel">
+      <button class="close" id="closeAi">×</button>
+      <h2>AI Job Picture</h2>
+      <p>Use the generated prompt with your preferred AI image generator to create a realistic before/after-style clearance image for this job.</p>
+      <textarea id="aiPrompt" rows="7" readonly></textarea>
+      <button class="primary" id="copyAiPrompt">COPY AI PROMPT</button>
+      <button id="closeAiBtn">CLOSE</button>
+    </div>
+  </div>
+
   <div id="pinModal" class="modal hidden">
     <div class="modal-panel pin-panel">
       <h2>Owner PIN</h2>
@@ -150,12 +165,13 @@
       <input id="pinInput" type="password" inputmode="numeric" maxlength="8" autocomplete="off">
       <button class="primary" id="pinSubmit">UNLOCK</button>
       <button id="pinCancel">CANCEL</button>
-      <small>Default PIN: 2468. Change it in Settings in the app code before use.</small>
+      <small>Default PIN: 2460. Change it in Settings in the app code before use.</small>
     </div>
   </div>
 
   <div id="toast" class="toast"></div>
 </div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="app.js"></script>
 </body>
 </html>
