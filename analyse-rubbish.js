@@ -1,7 +1,10 @@
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
   try {
-    const apiKey = process.env.OPENAI_API_KEY;
+    // TEMPORARY TEST KEY: replace/remove this when testing is finished.
+    // Production should use OPENAI_API_KEY in the hosting provider's environment.
+    const TEST_OPENAI_API_KEY = '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';
+    const apiKey = process.env.OPENAI_API_KEY || TEST_OPENAI_API_KEY;
     if (!apiKey) return res.status(500).json({ error: 'AI service is not configured on the server.' });
 
     const { image } = req.body || {};
